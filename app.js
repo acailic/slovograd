@@ -213,6 +213,11 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
   const show = (node) => node && node.removeAttribute('hidden');
   const hide = (node) => node && node.setAttribute('hidden', '');
 
+  // Монотони сат — не скаче са системским временом (за разлику од Date.now)
+  const monotonicNow = () => (
+    typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()
+  );
+
   // Оverlay-и са управљањем фокуса (доступност): фокус у панел при отварању,
   // враћање на претходни елемент при затварању.
   function openOverlay(overlay) {
@@ -301,7 +306,8 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
     closeOverlay(el.overlayRound);
     show(el.game);
 
-    state.deadline = Date.now() + state.roundSeconds * 1000;
+    // монотони сат: имун на скокове системског сата (NTP и сл.)
+    state.deadline = monotonicNow() + state.roundSeconds * 1000;
     clearInterval(state.timerId);
     state.timerId = null;
     state.pausedRemaining = null;
@@ -310,7 +316,7 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
   }
 
   function tickTimer() {
-    const msLeft = Math.max(0, state.deadline - Date.now());
+    const msLeft = Math.max(0, state.deadline - monotonicNow());
     const sLeft = Math.ceil(msLeft / 1000);
     el.timerNum.textContent = sLeft;
     el.timerFill.style.width = `${(msLeft / (state.roundSeconds * 1000)) * 100}%`;
@@ -318,6 +324,25 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
     el.timerNum.classList.toggle('low', low);
     el.timerFill.classList.toggle('low', low);
     if (msLeft <= 0) endRound();
+  }
+
+  // Пауза/наставак тајмера — за стратегију И за таб у позадини.
+  // Рунда не сме да "изгори" док играч не гледа (браузер дрослира позадину).
+  function pauseTimer() {
+    if (state.timerId === null) return;
+    state.pausedRemaining = Math.max(0, state.deadline - monotonicNow());
+    clearInterval(state.timerId);
+    state.timerId = null;
+  }
+
+  function resumeTimer() {
+    if (state.pausedRemaining === null) return;
+    if (!el.overlayStrategy.hasAttribute('hidden')) return; // стратегија чита — држимо паузу
+    if (typeof document !== 'undefined' && document.hidden) return; // таб још у позадини
+    state.deadline = monotonicNow() + state.pausedRemaining;
+    state.pausedRemaining = null;
+    state.timerId = setInterval(tickTimer, 200);
+    tickTimer();
   }
 
   function renderTiles() {
@@ -428,6 +453,8 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
 
   function endRound() {
     clearInterval(state.timerId);
+    state.timerId = null;
+    state.pausedRemaining = null;
     clearInput();
 
     const yoursLen = state.bestWord.length;
@@ -553,27 +580,28 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
 
   // Стратегија за време рунде паузира тајмер, али само ако рунда траје
   function openStrategy() {
-    if (!el.game.hasAttribute('hidden') && state.timerId !== null) {
-      state.pausedRemaining = state.deadline - Date.now();
-      clearInterval(state.timerId);
-      state.timerId = null;
-    }
+    if (!el.game.hasAttribute('hidden')) pauseTimer();
     openOverlay(el.overlayStrategy);
   }
 
   function closeStrategy() {
     closeOverlay(el.overlayStrategy);
-    if (state.pausedRemaining !== null) {
-      state.deadline = Date.now() + state.pausedRemaining;
-      state.pausedRemaining = null;
-      state.timerId = setInterval(tickTimer, 200);
-    }
+    resumeTimer();
   }
 
   el.btnStrategy.addEventListener('click', openStrategy);
   el.btnStrategy2.addEventListener('click', openStrategy);
   $('btn-strategy-intro').addEventListener('click', openStrategy);
   el.btnStrategyClose.addEventListener('click', closeStrategy);
+
+  // Таб у позадини → пауза; повратак у таб → наставак (рунда не изгори невиђена)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (!el.game.hasAttribute('hidden')) pauseTimer();
+    } else {
+      resumeTimer();
+    }
+  });
 
   document.addEventListener('keydown', (e) => {
     if (!el.overlayStrategy.hasAttribute('hidden')) {
