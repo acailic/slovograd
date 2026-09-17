@@ -55,11 +55,20 @@
       <h2>Словоград</h2>
       <p class="tagline">Сложи <strong>најдужу могућу реч</strong> из понуђених слова.</p>
       <ul class="rules">
-        <li>5 рунди · у свакој <strong>12 слова</strong> и <strong>60 секунди</strong></li>
+        <li id="rules-line">5 рунди · у свакој <strong>12 слова</strong> и <strong id="rules-seconds">60 секунди</strong></li>
         <li>Реч мора бити у речнику (најмање 3 слова)</li>
         <li>Најдужа реч у рунди доноси толико поена колико има слова; реч од свих 12 слова = бонус +3</li>
         <li>На крају рунде видиш <strong>шта је могло</strong> и добијеш савет како да размишљаш</li>
       </ul>
+      <div class="time-config">
+        <span class="time-label">Време за слагање:</span>
+        <div class="time-options" id="time-options" role="group" aria-label="Време по рунди у секундама">
+          <button type="button" class="time-opt" data-seconds="30">30с</button>
+          <button type="button" class="time-opt selected" data-seconds="60">60с</button>
+          <button type="button" class="time-opt" data-seconds="90">90с</button>
+          <button type="button" class="time-opt" data-seconds="120">120с</button>
+        </div>
+      </div>
       <button class="btn btn-primary btn-big" id="btn-start" type="button">Почни игру</button>
       <button class="btn btn-ghost btn-big" id="btn-strategy-intro" type="button">Како да размишљаш (стратегија)</button>
     </div>
@@ -112,7 +121,7 @@
       </table>
 
       <div class="panel-actions">
-        <button class="btn btn-primary btn-big" id="btn-again" type="button">Играј поново</button>
+        <button class="btn btn-primary btn-big" id="btn-again" type="button">Нова игра (ту подешаваш време)</button>
         <button class="btn btn-ghost" id="btn-strategy-2" type="button">Прочитај стратегију</button>
       </div>
     </div>

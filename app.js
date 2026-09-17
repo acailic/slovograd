@@ -189,9 +189,12 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
   };
 
   const BEST_KEY = 'slovograd.rekord';
+  const TIME_KEY = 'slovograd.vreme';
+  const TIME_CHOICES = [30, 60, 90, 120];
   const state = {
     round: 0,
     score: 0,
+    roundSeconds: ROUND_SECONDS, // подешено на intro екрану, default 60с
     letters: [],        // [{ ch, used }]
     input: [],          // индекси у state.letters
     found: [],          // речи текуће рунде
@@ -243,6 +246,38 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
     return v;
   }
 
+  // Време по рунди: чува се у localStorage, подразумевано 60с
+  function loadTimeSetting() {
+    let saved = 0;
+    try {
+      saved = Number(localStorage.getItem(TIME_KEY)) || 0;
+    } catch { /* игнориши — остаје default */ }
+    if (!TIME_CHOICES.includes(saved)) saved = ROUND_SECONDS;
+    state.roundSeconds = saved;
+    document.querySelectorAll('.time-opt').forEach((btn) => {
+      const selected = Number(btn.dataset.seconds) === saved;
+      btn.classList.toggle('selected', selected);
+      btn.setAttribute('aria-pressed', String(selected));
+    });
+    const rulesSeconds = document.getElementById('rules-seconds');
+    if (rulesSeconds) rulesSeconds.textContent = `${saved} секунди`;
+    return saved;
+  }
+
+  function setTimeSetting(seconds) {
+    state.roundSeconds = seconds;
+    try {
+      localStorage.setItem(TIME_KEY, String(seconds));
+    } catch { /* игнориши — важи за ову сесију */ }
+    document.querySelectorAll('.time-opt').forEach((btn) => {
+      const selected = Number(btn.dataset.seconds) === seconds;
+      btn.classList.toggle('selected', selected);
+      btn.setAttribute('aria-pressed', String(selected));
+    });
+    const rulesSeconds = document.getElementById('rules-seconds');
+    if (rulesSeconds) rulesSeconds.textContent = `${seconds} секунди`;
+  }
+
   /* ── Рунда ─────────────────────────────────────── */
 
   function startRound() {
@@ -266,8 +301,10 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
     closeOverlay(el.overlayRound);
     show(el.game);
 
-    state.deadline = Date.now() + ROUND_SECONDS * 1000;
+    state.deadline = Date.now() + state.roundSeconds * 1000;
     clearInterval(state.timerId);
+    state.timerId = null;
+    state.pausedRemaining = null;
     tickTimer();
     state.timerId = setInterval(tickTimer, 200);
   }
@@ -276,7 +313,7 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
     const msLeft = Math.max(0, state.deadline - Date.now());
     const sLeft = Math.ceil(msLeft / 1000);
     el.timerNum.textContent = sLeft;
-    el.timerFill.style.width = `${(msLeft / (ROUND_SECONDS * 1000)) * 100}%`;
+    el.timerFill.style.width = `${(msLeft / (state.roundSeconds * 1000)) * 100}%`;
     const low = sLeft <= 10;
     el.timerNum.classList.toggle('low', low);
     el.timerFill.classList.toggle('low', low);
@@ -501,13 +538,13 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
   });
 
   el.btnAgain.addEventListener('click', () => {
+    // на intro да играч може да промени време пре нове игре
     closeOverlay(el.overlayEnd);
-    state.round = 0;
-    state.score = 0;
-    state.usedSeeds.clear();
-    state.history = [];
-    el.hudScore.textContent = '0';
-    startRound();
+    openOverlay(el.overlayIntro);
+  });
+
+  document.querySelectorAll('.time-opt').forEach((btn) => {
+    btn.addEventListener('click', () => setTimeSetting(Number(btn.dataset.seconds)));
   });
 
   el.btnClear.addEventListener('click', clearInput);
@@ -557,6 +594,7 @@ if (typeof document !== 'undefined' && document.getElementById('tiles')) {
   });
 
   loadBest();
+  loadTimeSetting();
   // фокус на intro панел да је табовање одмах у дијалогу
   const introPanel = el.overlayIntro.querySelector('.panel');
   if (introPanel) introPanel.focus();

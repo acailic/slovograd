@@ -390,10 +390,53 @@ body {
 }
 
 .rules {
-  margin: 0 0 18px;
+  margin: 0 0 14px;
   padding-left: 22px;
   line-height: 1.65;
   color: var(--ink);
+}
+
+/* ── Подешавање времена ────────────────────────── */
+
+.time-config {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+
+.time-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.time-options {
+  display: flex;
+  gap: 8px;
+}
+
+.time-opt {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--navy);
+  background: #fff;
+  border: 2px solid var(--blue-border);
+  border-radius: 999px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.time-opt:hover { background: #eef4fb; }
+
+.time-opt.selected {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
 }
 
 .compare {
